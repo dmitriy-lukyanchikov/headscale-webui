@@ -37,11 +37,11 @@ app.logger.info("DEBUG STATE:  %s", str(DEBUG_STATE))
 # Set Authentication type.  Currently "OIDC" and "BASIC"
 ########################################################################################
 if AUTH_TYPE == "oidc":
-    # Currently using: flask-providers-oidc - https://pypi.org/project/flask-providers-oidc/ 
+    # Currently using: flask-providers-oidc - https://pypi.org/project/flask-providers-oidc/
     #
-    # https://gist.github.com/thomasdarimont/145dc9aa857b831ff2eff221b79d179a/ 
-    # https://www.authelia.com/integration/openid-connect/introduction/ 
-    # https://github.com/steinarvk/flask_oidc_demo 
+    # https://gist.github.com/thomasdarimont/145dc9aa857b831ff2eff221b79d179a/
+    # https://www.authelia.com/integration/openid-connect/introduction/
+    # https://github.com/steinarvk/flask_oidc_demo
     app.logger.info("Loading OIDC libraries and configuring app...")
 
     DOMAIN_NAME    = os.environ["DOMAIN_NAME"]
@@ -75,7 +75,7 @@ if AUTH_TYPE == "oidc":
     with open("/app/instance/secrets.json", "r+") as secrets_json:
         app.logger.debug("/app/instances/secrets.json:")
         app.logger.debug(secrets_json.read())
-    
+
     app.config.update({
         'SECRET_KEY': secrets.token_urlsafe(32),
         'TESTING': DEBUG_STATE,
@@ -103,7 +103,7 @@ elif AUTH_TYPE == "basic":
     basic_auth = BasicAuth(app)
     ########################################################################################
     # Set Authentication type - Dynamically load function decorators
-    # https://stackoverflow.com/questions/17256602/assertionerror-view-function-mapping-is-overwriting-an-existing-endpoint-functi 
+    # https://stackoverflow.com/questions/17256602/assertionerror-view-function-mapping-is-overwriting-an-existing-endpoint-functi
     ########################################################################################
     # Make a fake decorator for oidc.require_login
     # If anyone knows a better way of doing this, please let me know.
@@ -118,7 +118,7 @@ elif AUTH_TYPE == "basic":
 else:
     ########################################################################################
     # Set Authentication type - Dynamically load function decorators
-    # https://stackoverflow.com/questions/17256602/assertionerror-view-function-mapping-is-overwriting-an-existing-endpoint-functi 
+    # https://stackoverflow.com/questions/17256602/assertionerror-view-function-mapping-is-overwriting-an-existing-endpoint-functi
     ########################################################################################
     # Make a fake decorator for oidc.require_login
     # If anyone knows a better way of doing this, please let me know.
@@ -176,7 +176,7 @@ def routes_page():
         name          = oidc.user_getfield("name")
         OIDC_NAV_DROPDOWN = renderer.oidc_nav_dropdown(user_name, email_address, name)
         OIDC_NAV_MOBILE   = renderer.oidc_nav_mobile(user_name, email_address, name)
-    
+
     return render_template('routes.html',
         render_page       = renderer.render_routes(),
         COLOR_NAV         = COLOR_NAV,
@@ -203,7 +203,7 @@ def machines_page():
         name          = oidc.user_getfield("name")
         OIDC_NAV_DROPDOWN = renderer.oidc_nav_dropdown(user_name, email_address, name)
         OIDC_NAV_MOBILE   = renderer.oidc_nav_mobile(user_name, email_address, name)
-    
+
     cards = renderer.render_machines_cards()
     return render_template('machines.html',
         cards             = cards,
@@ -248,7 +248,7 @@ def users_page():
 def settings_page():
     # Some basic sanity checks:
     pass_checks = str(helper.load_checks())
-    if pass_checks != "Pass" and pass_checks != "settings_page": 
+    if pass_checks != "Pass" and pass_checks != "settings_page":
         return redirect(url_for(pass_checks))
 
     # Check if OIDC is enabled.  If it is, display the buttons:
@@ -263,7 +263,7 @@ def settings_page():
 
     GIT_COMMIT_LINK = Markup("<a href='https://github.com/iFargle/headscale-webui/commit/"+os.environ["GIT_COMMIT"]+"'>"+str(os.environ["GIT_COMMIT"])[0:7]+"</a>")
 
-    return render_template('settings.html', 
+    return render_template('settings.html',
         url          = headscale.get_url(),
         COLOR_NAV    = COLOR_NAV,
         COLOR_BTN    = COLOR_BTN,
@@ -279,10 +279,10 @@ def settings_page():
 @app.route('/error')
 @oidc.require_login
 def error_page():
-    if helper.access_checks() == "Pass": 
+    if helper.access_checks() == "Pass":
         return redirect(url_for('overview_page'))
 
-    return render_template('error.html', 
+    return render_template('error.html',
         ERROR_MESSAGE = Markup(helper.access_checks())
     )
 
@@ -305,7 +305,7 @@ def test_key_page():
     api_key    = headscale.get_api_key()
     url        = headscale.get_url()
 
-    # Test the API key.  If the test fails, return a failure.  
+    # Test the API key.  If the test fails, return a failure.
     status = headscale.test_api_key(url, api_key)
     if status != 200: return "Unauthenticated"
 
@@ -481,7 +481,7 @@ def delete_user():
 def get_users_page():
     url           = headscale.get_url()
     api_key       = headscale.get_api_key()
-    
+
     return headscale.get_users(url, api_key)
 
 ########################################################################################

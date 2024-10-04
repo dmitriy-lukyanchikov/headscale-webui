@@ -23,47 +23,47 @@ match LOG_LEVEL:
 # Functions related to HEADSCALE and API KEYS
 ##################################################################
 def get_url(inpage=False):
-    if not inpage: 
+    if not inpage:
         return os.environ['HS_SERVER']
     config_file = ""
     try:
         config_file = open("/etc/headscale/config.yml",  "r")
         app.logger.info("Opening /etc/headscale/config.yml")
-    except: 
+    except:
         config_file = open("/etc/headscale/config.yaml", "r")
         app.logger.info("Opening /etc/headscale/config.yaml")
     config_yaml = yaml.safe_load(config_file)
-    if "server_url" in config_yaml: 
+    if "server_url" in config_yaml:
         return str(config_yaml["server_url"])
     app.logger.warning("Failed to find server_url in the config. Falling back to ENV variable")
     return os.environ['HS_SERVER']
 
 def set_api_key(api_key):
     # User-set encryption key
-    encryption_key = os.environ['KEY']                      
+    encryption_key = os.environ['KEY']
     # Key file on the filesystem for persistent storage
     key_file       = open(os.path.join(DATA_DIRECTORY, "key.txt"), "wb+")
     # Preparing the Fernet class with the key
-    fernet         = Fernet(encryption_key)                 
+    fernet         = Fernet(encryption_key)
     # Encrypting the key
-    encrypted_key  = fernet.encrypt(api_key.encode())       
+    encrypted_key  = fernet.encrypt(api_key.encode())
     # Return true if the file wrote correctly
-    return True if key_file.write(encrypted_key) else False 
+    return True if key_file.write(encrypted_key) else False
 
 def get_api_key():
     if not os.path.exists(os.path.join(DATA_DIRECTORY, "key.txt")): return False
     # User-set encryption key
-    encryption_key = os.environ['KEY']                      
+    encryption_key = os.environ['KEY']
     # Key file on the filesystem for persistent storage
-    key_file       = open(os.path.join(DATA_DIRECTORY, "key.txt"), "rb+")           
+    key_file       = open(os.path.join(DATA_DIRECTORY, "key.txt"), "rb+")
     # The encrypted key read from the file
-    enc_api_key    = key_file.read()                        
+    enc_api_key    = key_file.read()
     if enc_api_key == b'': return "NULL"
 
     # Preparing the Fernet class with the key
-    fernet         = Fernet(encryption_key)                 
+    fernet         = Fernet(encryption_key)
     # Decrypting the key
-    decrypted_key  = fernet.decrypt(enc_api_key).decode()   
+    decrypted_key  = fernet.decrypt(enc_api_key).decode()
 
     return decrypted_key
 
@@ -98,7 +98,7 @@ def expire_key(url, api_key):
 # If it does, renews the key, then expires the old key
 def renew_api_key(url, api_key):
     # 0 = Key has been updated or key is not in need of an update
-    # 1 = Key has failed validity check or has failed to write the API key 
+    # 1 = Key has failed validity check or has failed to write the API key
     # Check when the key expires and compare it to todays date:
     key_info            = get_api_key_info(url, api_key)
     expiration_time     = key_info["expiration"]
@@ -107,7 +107,7 @@ def renew_api_key(url, api_key):
     expire_fmt          = str(expire.year) + "-" + str(expire.month).zfill(2) + "-" + str(expire.day).zfill(2)
     expire_date         = date.fromisoformat(expire_fmt)
     delta               = expire_date - today_date
-    tmp                 = today_date + timedelta(days=90) 
+    tmp                 = today_date + timedelta(days=90)
     new_expiration_date = str(tmp)+"T00:00:00.000000Z"
 
     # If the delta is less than 5 days, renew the key:
@@ -140,7 +140,7 @@ def renew_api_key(url, api_key):
             app.logger.info("Key validated and written.  Moving to expire the key.")
             expire_key(url, api_key)
             return True     # Key updated and validated
-        else: 
+        else:
             app.logger.error("Testing the API key failed.")
             return False  # The API Key test failed
     else: return True       # No work is required
@@ -156,7 +156,7 @@ def get_api_key_info(url, api_key):
         }
     )
     json_response = response.json()
-    # Find the current key in the array:  
+    # Find the current key in the array:
     key_prefix = str(api_key[0:10])
     app.logger.info("Looking for valid API Key...")
     for key in json_response["apiKeys"]:
@@ -174,7 +174,7 @@ def get_api_key_info(url, api_key):
 def register_machine(url, api_key, machine_key, user):
     app.logger.info("Registering machine %s to user %s", str(machine_key), str(user))
     response = requests.post(
-        str(url)+"/api/v1/machine/register?user="+str(user)+"&key="+str(machine_key),
+        str(url)+"/api/v1/node/register?user="+str(user)+"&key="+str(machine_key),
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -187,7 +187,7 @@ def register_machine(url, api_key, machine_key, user):
 def set_machine_tags(url, api_key, machine_id, tags_list):
     app.logger.info("Setting machine_id %s tag %s", str(machine_id), str(tags_list))
     response = requests.post(
-        str(url)+"/api/v1/machine/"+str(machine_id)+"/tags",
+        str(url)+"/api/v1/node/"+str(machine_id)+"/tags",
         data=tags_list,
         headers={
             'Accept': 'application/json',
@@ -201,7 +201,7 @@ def set_machine_tags(url, api_key, machine_id, tags_list):
 def move_user(url, api_key, machine_id, new_user):
     app.logger.info("Moving machine_id %s to user %s", str(machine_id), str(new_user))
     response = requests.post(
-        str(url)+"/api/v1/machine/"+str(machine_id)+"/user?user="+str(new_user),
+        str(url)+"/api/v1/node/"+str(machine_id)+"/user?user="+str(new_user),
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -233,7 +233,7 @@ def update_route(url, api_key, route_id, current_state):
 def get_machines(url, api_key):
     app.logger.info("Getting machine information")
     response = requests.get(
-        str(url)+"/api/v1/machine",
+        str(url)+"/api/v1/node",
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -245,7 +245,7 @@ def get_machines(url, api_key):
 def get_machine_info(url, api_key, machine_id):
     app.logger.info("Getting information for machine ID %s", str(machine_id))
     response = requests.get(
-        str(url)+"/api/v1/machine/"+str(machine_id),
+        str(url)+"/api/v1/node/"+str(machine_id),
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -257,7 +257,7 @@ def get_machine_info(url, api_key, machine_id):
 def delete_machine(url, api_key, machine_id):
     app.logger.info("Deleting machine %s", str(machine_id))
     response = requests.delete(
-        str(url)+"/api/v1/machine/"+str(machine_id),
+        str(url)+"/api/v1/node/"+str(machine_id),
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -274,7 +274,7 @@ def delete_machine(url, api_key, machine_id):
 def rename_machine(url, api_key, machine_id, new_name):
     app.logger.info("Renaming machine %s", str(machine_id))
     response = requests.post(
-        str(url)+"/api/v1/machine/"+str(machine_id)+"/rename/"+str(new_name),
+        str(url)+"/api/v1/node/"+str(machine_id)+"/rename/"+str(new_name),
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -291,7 +291,7 @@ def rename_machine(url, api_key, machine_id, new_name):
 def get_machine_routes(url, api_key, machine_id):
     app.logger.info("Getting routes for machine %s", str(machine_id))
     response = requests.get(
-        str(url)+"/api/v1/machine/"+str(machine_id)+"/routes",
+        str(url)+"/api/v1/node/"+str(machine_id)+"/routes",
         headers={
             'Accept': 'application/json',
             'Authorization': 'Bearer '+str(api_key)
@@ -399,7 +399,7 @@ def get_preauth_keys(url, api_key, user_name):
     )
     return response.json()
 
-# Add a preauth key to the user "user_name" given the booleans "ephemeral" 
+# Add a preauth key to the user "user_name" given the booleans "ephemeral"
 # and "reusable" with the expiration date "date" contained in the JSON payload "data"
 def add_preauth_key(url, api_key, data):
     app.logger.info("Adding PreAuth Key:  %s", str(data))

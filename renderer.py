@@ -25,47 +25,47 @@ def render_overview():
 
     timezone         = pytz.timezone(os.environ["TZ"] if os.environ["TZ"] else "UTC")
     local_time       = timezone.localize(datetime.now())
-    
+
     # Overview page will just read static information from the config file and display it
     # Open the config.yaml and parse it.
     config_file = ""
-    try:    
+    try:
         config_file = open("/etc/headscale/config.yml",  "r")
         app.logger.info("Opening /etc/headscale/config.yml")
-    except: 
+    except:
         config_file = open("/etc/headscale/config.yaml", "r")
         app.logger.info("Opening /etc/headscale/config.yaml")
     config_yaml = yaml.safe_load(config_file)
 
     # Get and display the following information:
     # Overview of the server's machines, users, preauth keys, API key expiration, server version
-    
+
     # Get all machines:
     machines = headscale.get_machines(url, api_key)
-    machines_count = len(machines["machines"])
+    machines_count = len(machines.get("nodes"))
 
     # Need to check if routes are attached to an active machine:
-    # ISSUE:  https://github.com/iFargle/headscale-webui/issues/36 
-    # ISSUE:  https://github.com/juanfont/headscale/issues/1228 
+    # ISSUE:  https://github.com/iFargle/headscale-webui/issues/36
+    # ISSUE:  https://github.com/juanfont/headscale/issues/1228
 
     # Get all routes:
     routes = headscale.get_routes(url,api_key)
 
     total_routes = 0
     for route in routes["routes"]:
-        if int(route['machine']['id']) != 0: 
+        if int(route['node']['id']) != 0:
             total_routes += 1
 
     enabled_routes = 0
     for route in routes["routes"]:
-        if route["enabled"] and route['advertised'] and int(route['machine']['id']) != 0: 
+        if route["enabled"] and route['advertised'] and int(route['node']['id']) != 0:
             enabled_routes += 1
 
     # Get a count of all enabled exit routes
     exits_count = 0
     exits_enabled_count = 0
     for route in routes["routes"]:
-        if route['advertised'] and int(route['machine']['id']) != 0:
+        if route['advertised'] and int(route['node']['id']) != 0:
             if route["prefix"] == "0.0.0.0/0" or route["prefix"] == "::/0":
                 exits_count +=1
                 if route["enabled"]:
@@ -95,28 +95,28 @@ def render_overview():
     # OIDC Content variables:
     issuer, client_id, scope, use_expiry_from_token, expiry = "N/A", "N/A", "N/A", "N/A", "N/A"
     if "oidc" in config_yaml:
-        if "issuer"                in config_yaml["oidc"] : issuer                = str(config_yaml["oidc"]["issuer"])                
-        if "client_id"             in config_yaml["oidc"] : client_id             = str(config_yaml["oidc"]["client_id"])             
-        if "scope"                 in config_yaml["oidc"] : scope                 = str(config_yaml["oidc"]["scope"])                 
-        if "use_expiry_from_token" in config_yaml["oidc"] : use_expiry_from_token = str(config_yaml["oidc"]["use_expiry_from_token"]) 
-        if "expiry"                in config_yaml["oidc"] : expiry                = str(config_yaml["oidc"]["expiry"])   
+        if "issuer"                in config_yaml["oidc"] : issuer                = str(config_yaml["oidc"]["issuer"])
+        if "client_id"             in config_yaml["oidc"] : client_id             = str(config_yaml["oidc"]["client_id"])
+        if "scope"                 in config_yaml["oidc"] : scope                 = str(config_yaml["oidc"]["scope"])
+        if "use_expiry_from_token" in config_yaml["oidc"] : use_expiry_from_token = str(config_yaml["oidc"]["use_expiry_from_token"])
+        if "expiry"                in config_yaml["oidc"] : expiry                = str(config_yaml["oidc"]["expiry"])
 
     # Embedded DERP server information.
     enabled, region_id, region_code, region_name, stun_listen_addr = "N/A", "N/A", "N/A", "N/A", "N/A"
     if "derp" in config_yaml:
         if "server" in config_yaml["derp"] and config_yaml["derp"]["server"]["enabled"]:
-            if "enabled"          in config_yaml["derp"]["server"]: enabled          = str(config_yaml["derp"]["server"]["enabled"])          
-            if "region_id"        in config_yaml["derp"]["server"]: region_id        = str(config_yaml["derp"]["server"]["region_id"])        
-            if "region_code"      in config_yaml["derp"]["server"]: region_code      = str(config_yaml["derp"]["server"]["region_code"])      
-            if "region_name"      in config_yaml["derp"]["server"]: region_name      = str(config_yaml["derp"]["server"]["region_name"])      
-            if "stun_listen_addr" in config_yaml["derp"]["server"]: stun_listen_addr = str(config_yaml["derp"]["server"]["stun_listen_addr"]) 
-    
+            if "enabled"          in config_yaml["derp"]["server"]: enabled          = str(config_yaml["derp"]["server"]["enabled"])
+            if "region_id"        in config_yaml["derp"]["server"]: region_id        = str(config_yaml["derp"]["server"]["region_id"])
+            if "region_code"      in config_yaml["derp"]["server"]: region_code      = str(config_yaml["derp"]["server"]["region_code"])
+            if "region_name"      in config_yaml["derp"]["server"]: region_name      = str(config_yaml["derp"]["server"]["region_name"])
+            if "stun_listen_addr" in config_yaml["derp"]["server"]: stun_listen_addr = str(config_yaml["derp"]["server"]["stun_listen_addr"])
+
     nameservers, magic_dns, domains, base_domain = "N/A", "N/A", "N/A", "N/A"
     if "dns_config" in config_yaml:
-        if "nameservers" in config_yaml["dns_config"]: nameservers = str(config_yaml["dns_config"]["nameservers"]) 
-        if "magic_dns"   in config_yaml["dns_config"]: magic_dns   = str(config_yaml["dns_config"]["magic_dns"])   
-        if "domains"     in config_yaml["dns_config"]: domains     = str(config_yaml["dns_config"]["domains"])     
-        if "base_domain" in config_yaml["dns_config"]: base_domain = str(config_yaml["dns_config"]["base_domain"]) 
+        if "nameservers" in config_yaml["dns_config"]: nameservers = str(config_yaml["dns_config"]["nameservers"])
+        if "magic_dns"   in config_yaml["dns_config"]: magic_dns   = str(config_yaml["dns_config"]["magic_dns"])
+        if "domains"     in config_yaml["dns_config"]: domains     = str(config_yaml["dns_config"]["domains"])
+        if "base_domain" in config_yaml["dns_config"]: base_domain = str(config_yaml["dns_config"]["base_domain"])
 
     # Start putting the content together
     overview_content = """
@@ -209,16 +209,16 @@ def render_overview():
             if str(config_yaml["derp"]["server"]["enabled"]) == "False":
                 derp_content = ""
 
-    # TODO:  
+    # TODO:
     #     Whether there are custom DERP servers
     #         If there are custom DERP servers, get the file location from the config file.  Assume mapping is the same.
-    #     Whether the built-in DERP server is enabled 
+    #     Whether the built-in DERP server is enabled
     #     The IP prefixes
     #     The DNS config
 
     if config_yaml["derp"]["paths"]: pass
     #   # open the path:
-    #   derp_file = 
+    #   derp_file =
     #   config_file = open("/etc/headscale/config.yaml", "r")
     #   config_yaml = yaml.safe_load(config_file)
     #     The ACME config, if not empty
@@ -263,7 +263,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
         # First, check if there are any routes that are both enabled and advertised
         # If that is true, we will output the collection-item for routes.  Otherwise, it will not be displayed.
         for route in pulled_routes["routes"]:
-            if route["advertised"]: 
+            if route["advertised"]:
                 advertised_routes = True
         if advertised_routes:
             routes = """
@@ -280,7 +280,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
             exit_enabled_color = "red"
             exit_tooltip = "enable"
             exit_route_enabled = False
-            
+
             for route in pulled_routes["routes"]:
                 if route["prefix"] == "0.0.0.0/0" or route["prefix"] == "::/0":
                     exit_routes.append(route["id"])
@@ -295,7 +295,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
 
             # Print the button for the Exit routes:
             if exit_route_found:
-                routes = routes+""" <p 
+                routes = routes+""" <p
                     class='waves-effect waves-light btn-small """+exit_enabled_color+""" lighten-2 tooltipped'
                     data-position='top' data-tooltip='Click to """+exit_tooltip+"""'
                     id='"""+machine["id"]+"""-exit'
@@ -304,15 +304,15 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
                 </p>
                 """
 
-            # Check if the route has another enabled identical route.  
+            # Check if the route has another enabled identical route.
             # Check all routes from the current machine...
             for route in pulled_routes["routes"]:
                 # ... against all routes from all machines ....
                 for route_info in all_routes["routes"]:
                     app.logger.debug("Comparing routes %s and %s", str(route["prefix"]), str(route_info["prefix"]))
-                    # ... If the route prefixes match and are not exit nodes ... 
+                    # ... If the route prefixes match and are not exit nodes ...
                     if str(route_info["prefix"]) == str(route["prefix"]) and (route["prefix"] != "0.0.0.0/0" and route["prefix"] != "::/0"):
-                        # Check if the route ID's match.  If they don't ... 
+                        # Check if the route ID's match.  If they don't ...
                         app.logger.debug("Found a match:  %s and %s", str(route["prefix"]), str(route_info["prefix"]))
                         if route_info["id"] != route["id"]:
                             app.logger.debug("Route ID's don't match.  They're on different nodes.")
@@ -336,7 +336,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
                         color_index   = failover_pair_prefixes.index(str(route["prefix"]))
                         route_enabled = helper.get_color(color_index, "failover")
                         route_tooltip = 'disable'
-                    routes = routes+""" <p 
+                    routes = routes+""" <p
                         class='waves-effect waves-light btn-small """+route_enabled+""" lighten-2 tooltipped'
                         data-position='top' data-tooltip='Click to """+route_tooltip+""" (Failover Pair)'
                         id='"""+route['id']+"""'
@@ -344,18 +344,18 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
                         """+route['prefix']+"""
                     </p>
                     """
-                    
+
             # Get the remaining routes:
             for route in pulled_routes["routes"]:
                 # Get the remaining routes - No exits or failover pairs
                 if route["prefix"] != "0.0.0.0/0" and route["prefix"] != "::/0" and route["prefix"] not in failover_pair_prefixes:
-                    app.logger.debug("Route:  ["+str(route['machine']['name'])+"] id: "+str(route['id'])+" / prefix: "+str(route['prefix'])+" enabled?:  "+str(route['enabled']))
+                    app.logger.debug("Route:  ["+str(route['node']['name'])+"] id: "+str(route['id'])+" / prefix: "+str(route['prefix'])+" enabled?:  "+str(route['enabled']))
                     route_enabled = "red"
                     route_tooltip = 'enable'
                     if route["enabled"]:
                         route_enabled = "green"
                         route_tooltip = 'disable'
-                    routes = routes+""" <p 
+                    routes = routes+""" <p
                         class='waves-effect waves-light btn-small """+route_enabled+""" lighten-2 tooltipped'
                         data-position='top' data-tooltip='Click to """+route_tooltip+"""'
                         id='"""+route['id']+"""'
@@ -367,7 +367,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
 
     # Get machine tags
     tag_array = ""
-    for tag in machine["forcedTags"]: 
+    for tag in machine["forcedTags"]:
         tag_array = tag_array+"{tag: '"+tag[4:]+"'}, "
     tags = """
         <li class="collection-item avatar">
@@ -376,14 +376,14 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
             <p><div style='margin: 0px' class='chips' id='"""+machine["id"]+"""-tags'></div></p>
         </li>
         <script>
-            window.addEventListener('load', 
-                function() { 
-                    var instances = M.Chips.init ( 
+            window.addEventListener('load',
+                function() {
+                    var instances = M.Chips.init (
                         document.getElementById('"""+machine['id']+"""-tags'),  ({
-                            data:["""+tag_array+"""], 
-                            onChipDelete() { delete_chip("""+machine["id"]+""", this.chipsData) }, 
+                            data:["""+tag_array+"""],
+                            onChipDelete() { delete_chip("""+machine["id"]+""", this.chipsData) },
                             onChipAdd()    { add_chip("""+machine["id"]+""",    this.chipsData) }
-                        }) 
+                        })
                     );
                 }, false
             )
@@ -402,8 +402,9 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
     last_seen_delta   = local_time - last_seen_local
     last_seen_print   = helper.pretty_print_duration(last_seen_delta)
     last_seen_time    = str(last_seen_local.strftime('%A %m/%d/%Y, %H:%M:%S'))+" "+str(timezone)+" ("+str(last_seen_print)+")"
-    
-    last_update_parse = local_time if machine["lastSuccessfulUpdate"] is None else parser.parse(machine["lastSuccessfulUpdate"])
+
+    last_update_parse = local_time if machine["lastSeen"] is None else parser.parse(machine["lastSeen"])
+
     last_update_local = last_update_parse.astimezone(timezone)
     last_update_delta = local_time - last_update_local
     last_update_print = helper.pretty_print_duration(last_update_delta)
@@ -425,7 +426,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
             expiry_time  = "No expiration date."
         elif int(expiry_local.strftime('%Y')) > int(expiry_local.strftime('%Y'))+2:
             expiry_time  = str(expiry_local.strftime('%m/%Y'))+" "+str(timezone)+" ("+str(expiry_print)+")"
-        else: 
+        else:
             expiry_time  = str(expiry_local.strftime('%A %m/%d/%Y, %H:%M:%S'))+" "+str(timezone)+" ("+str(expiry_print)+")"
 
         expiring_soon = True if int(expiry_delta.days) < 14 and int(expiry_delta.days) > 0 else False
@@ -453,7 +454,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
     expiration_badge  = "" if not expiring_soon      else "<span class='badge red white-text text-lighten-4 tooltipped' data-position='left' data-tooltip='This machine expires soon.'>Expiring!</span>"
 
     machine_content[idx] = (str(render_template(
-        'machines_card.html', 
+        'machines_card.html',
         given_name        = machine["givenName"],
         machine_id        = machine["id"],
         hostname          = machine["name"],
@@ -477,6 +478,7 @@ def thread_machine_content(machine, machine_content, idx, all_routes, failover_p
         machine_tags      = Markup(tags),
         taglist           = machine["forcedTags"]
     )))
+
     app.logger.info("Finished thread for machine "+machine["givenName"]+" index "+str(idx))
 
 def render_machines_cards():
@@ -486,8 +488,8 @@ def render_machines_cards():
     machines_list = headscale.get_machines(url, api_key)
 
     #########################################
-    # Thread this entire thing.  
-    num_threads = len(machines_list["machines"])
+    # Thread this entire thing.
+    num_threads = len(machines_list.get("nodes"))
     iterable = []
     machine_content = {}
     failover_pair_prefixes = []
@@ -502,17 +504,20 @@ def render_machines_cards():
     # app.logger.debug(str(all_routes))
 
     if LOG_LEVEL == "DEBUG":
-        # DEBUG:  Do in a forloop:
-        for idx in iterable: thread_machine_content(machines_list["machines"][idx], machine_content, idx, all_routes, failover_pair_prefixes)
+        for idx in iterable:
+            thread_machine_content(machines_list.get("nodes")[idx], machine_content, idx, all_routes, failover_pair_prefixes)
     else:
         app.logger.info("Starting futures")
-        futures = [executor.submit(thread_machine_content, machines_list["machines"][idx], machine_content, idx, all_routes, failover_pair_prefixes) for idx in iterable]
-        # Wait for the executor to finish all jobs:
+        futures = [executor.submit(thread_machine_content, machines_list.get("nodes")[idx], machine_content, idx, all_routes, failover_pair_prefixes) for idx in iterable]
         wait(futures, return_when=ALL_COMPLETED)
         app.logger.info("Finished futures")
 
+
     # Sort the content by machine_id:
     sorted_machines = {key: val for key, val in sorted(machine_content.items(), key = lambda ele: ele[0])}
+
+    app.logger.debug(f"Machine content: {machine_content}")
+    app.logger.debug(f"Sorted machines: {sorted_machines}")
 
     content = "<ul class='collapsible expandable'>"
     # Print the content
@@ -542,12 +547,12 @@ def render_users_cards():
         status_badge      = "<i class='material-icons left "+user_color+"' id='"+user["id"]+"-status'>fiber_manual_record</i>"
 
         content = content + render_template(
-            'users_card.html', 
+            'users_card.html',
             status_badge            = Markup(status_badge),
             user_name               = user["name"],
             user_id                 = user["id"],
             preauth_keys_collection = Markup(preauth_keys_collection)
-        ) 
+        )
     content = content+"</ul>"
     return Markup(content)
 
@@ -559,12 +564,12 @@ def build_preauth_key_table(user_name):
     preauth_keys = headscale.get_preauth_keys(url, api_key, user_name)
     preauth_keys_collection = """<li class="collection-item avatar">
             <span
-                class='badge grey lighten-2 btn-small' 
+                class='badge grey lighten-2 btn-small'
                 onclick='toggle_expired()'
             >Toggle Expired</span>
-            <span 
-                href="#card_modal" 
-                class='badge grey lighten-2 btn-small modal-trigger' 
+            <span
+                href="#card_modal"
+                class='badge grey lighten-2 btn-small modal-trigger'
                 onclick="load_modal_add_preauth_key('"""+user_name+"""')"
             >Add PreAuth Key</span>
             <i class="material-icons circle">vpn_key</i>
@@ -598,7 +603,7 @@ def build_preauth_key_table(user_name):
         key_usable = False
         if key["reusable"] and not key_expired: key_usable = True
         if not key["reusable"] and not key["used"] and not key_expired: key_usable = True
-        
+
         # Class for the javascript function to look for to toggle the hide function
         hide_expired = "expired-row" if not key_usable else ""
 
@@ -683,9 +688,9 @@ def render_routes():
     all_routes_id_list = []
     for route in all_routes["routes"]:
         all_routes_id_list.append(route["id"])
-        if route["machine"]["name"]:
-            app.logger.info("Found route %s / machine: %s", str(route["id"]), route["machine"]["name"])
-        else: 
+        if route["node"]["name"]:
+            app.logger.info("Found route %s / machine: %s", str(route["id"]), route["node"]["name"])
+        else:
             app.logger.info("Route id %s has no machine associated.", str(route["id"]))
 
 
@@ -704,7 +709,7 @@ def render_routes():
             <div class="card">
                 <div class="card-content">
     """
-    markup_post = """ 
+    markup_post = """
                 </div>
             </div>
         </div>
@@ -729,12 +734,12 @@ def render_routes():
     for route in all_routes["routes"]:
         # Get relevant info:
         route_id    = route["id"]
-        machine     = route["machine"]["givenName"]
+        machine     = route["node"]["givenName"]
         prefix      = route["prefix"]
         is_enabled  = route["enabled"]
         is_primary  = route["isPrimary"]
         is_failover = False
-        is_exit     = False 
+        is_exit     = False
 
         enabled  = "<i id='"+route["id"]+"' onclick='toggle_route("+route["id"]+", \"True\", \"routes\")'  class='material-icons green-text text-lighten-2 tooltipped' data-tooltip='Click to disable'>fiber_manual_record</i>"
         disabled = "<i id='"+route["id"]+"' onclick='toggle_route("+route["id"]+", \"False\", \"routes\")' class='material-icons red-text text-lighten-2 tooltipped' data-tooltip='Click to enable' >fiber_manual_record</i>"
@@ -772,7 +777,7 @@ def render_routes():
     for route in all_routes["routes"]:
         # Get a list of all prefixes for all routes...
         for route_check in all_routes["routes"]:
-            # ... that  aren't exit routes... 
+            # ... that  aren't exit routes...
             if route["prefix"] !="0.0.0.0/0" and route["prefix"] != "::/0":
                 # if the curren route matches any prefix of any other route...
                 if route["prefix"] == route_check["prefix"]:
@@ -827,14 +832,14 @@ def render_routes():
             for route_id in route_id_list:
                 idx = all_routes_id_list.index(route_id)
 
-                machine    = all_routes["routes"][idx]["machine"]["givenName"]
-                machine_id = all_routes["routes"][idx]["machine"]["id"]
+                machine    = all_routes["routes"][idx]["node"]["givenName"]
+                machine_id = all_routes["routes"][idx]["node"]["id"]
                 is_primary = all_routes["routes"][idx]["isPrimary"]
                 is_enabled = all_routes["routes"][idx]["enabled"]
 
                 payload = []
                 for item in route_id_list: payload.append(int(item))
-                 
+
                 app.logger.debug("[%s] Machine:  [%s]  %s : %s / %s", str(route_id), str(machine_id), str(machine), str(is_enabled), str(is_primary))
                 app.logger.debug(str(all_routes["routes"][idx]))
 
@@ -843,7 +848,7 @@ def render_routes():
                 enabled_display_disabled = "<i id='"+str(route_id)+"' onclick='toggle_failover_route_routespage("+str(route_id)+", \"False\", \""+str(route_prefix)+"\", "+str(payload)+")' class='material-icons red-text text-lighten-2 tooltipped' data-tooltip='Click to enable'>fiber_manual_record</i>"
                 primary_display_enabled  = "<i id='"+str(route_id)+"-primary' class='material-icons green-text text-lighten-2'>fiber_manual_record</i>"
                 primary_display_disabled = "<i id='"+str(route_id)+"-primary' class='material-icons red-text text-lighten-2'>fiber_manual_record</i>"
-                
+
                 # Set displays:
                 enabled_display = enabled_display_enabled if is_enabled else enabled_display_disabled
                 primary_display = primary_display_enabled if is_primary else primary_display_disabled
@@ -866,8 +871,8 @@ def render_routes():
     for route in all_routes["routes"]:
         # For every exit route found, store the machine name in an array:
         if route["prefix"] == "0.0.0.0/0" or route["prefix"] == "::/0":
-            if route["machine"]["givenName"] not in exit_node_list: 
-                exit_node_list.append(route["machine"]["givenName"])
+            if route["node"]["givenName"] not in exit_node_list:
+                exit_node_list.append(route["node"]["givenName"])
 
     # Exit node display building:
     # Display by machine, not by route
@@ -881,7 +886,7 @@ def render_routes():
     </thead>
     <tbody>
     """
-    # Get exit route ID's for each node in the list: 
+    # Get exit route ID's for each node in the list:
     for node in exit_node_list:
         node_exit_route_ids = []
         exit_enabled = False
@@ -889,9 +894,9 @@ def render_routes():
         machine_id = 0
         for route in all_routes["routes"]:
             if route["prefix"] == "0.0.0.0/0" or route["prefix"] == "::/0":
-                if route["machine"]["givenName"] == node:
+                if route["node"]["givenName"] == node:
                     node_exit_route_ids.append(route["id"])
-                    machine_id = route["machine"]["id"]
+                    machine_id = route["node"]["id"]
                     exit_available = True
                     if route["enabled"]:
                         exit_enabled = True
